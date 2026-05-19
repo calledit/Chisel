@@ -27,14 +27,6 @@ Standard optimizers (Adam, RMSprop) apply hand-engineered heuristics to manage t
 
 Chisel replaces these heuristics with a **learned, context-sensitive gradient filter** that routes updates to where they are needed based on direct observation of network activations.
 
-### The Diffusion Analogy
-
-Diffusion models learn to remove noise from a corrupted signal iteratively. The key insight is that noise has learnable statistical structure — a network can learn what noise looks like and subtract it.
-
-Gradient noise has analogous structure. Parameters uninvolved in processing a given sample will receive gradient signal that is, in expectation, noise relative to the learning objective for that sample. A network that observes which circuits were active can learn to identify and suppress that noise — performing gradient denoising in a manner structurally similar to diffusion.
-
----
-
 ## Architecture
 
 ### The Board
@@ -171,25 +163,69 @@ The primary success criterion is whether the Player's mask correlates with known
 
 ---
 
-## Relation to Existing Work
+## On Modularity and Why Neural Networks Lack It
 
-Chisel is conceptually adjacent to several existing research directions:
+One of the deeper problems Chisel gestures toward — but does not solve — is the absence of natural modularity in neural networks. Understanding why modularity fails to emerge, and why it might be necessary, is worth addressing directly.
 
-- **Learned optimizers** (Andrychowicz et al., Metz et al.) — meta-learning optimisation algorithms from data rather than hand-engineering them
-- **Gradient surgery** (Yu et al.) — modifying gradient directions to reduce inter-task interference in multi-task learning
-- **Mechanistic interpretability** — identifying functional circuit organisation inside transformers; Chisel attempts to learn this organisation implicitly through competitive training
-- **Sparse training** — applying updates only to subsets of parameters; Chisel learns which subset dynamically per batch rather than fixing it structurally
+### Modularity Is Universal In Biology
 
-Chisel differs from all of these in using competitive game dynamics to drive the learning of gradient routing, rather than supervised objectives, analytical gradient manipulation, or fixed structural sparsity.
+Modularity appears at every scale of living systems: organelles inside cells, cells inside tissues, organs inside organisms, organisms inside ecosystems. This is not a neural phenomenon specific to brains. It is a universal feature of complex biological organisation, which suggests its cause is something more fundamental than any property specific to neurons.
+
+### The Replicable Substrate Hypothesis
+
+A pattern common to every level where modularity appears: there is a **replicable unit at that level.** Organelles replicate inside cells. Cells replicate inside organisms. Organisms replicate inside populations.
+
+Evolutionary pressure operates on whatever can replicate. Selection favours things that replicate better.
+
+Things that replicate better tend to become more specialised at their specific role within the larger system.
+
+### Why Specialisation Requires Exactness
+
+A person who does one thing will always be better at that thing than a generalist — but only if the problem they face is exactly that one thing. The moment the problem contains even a fraction of something else, the generalist starts catching up. If the problem is two things in equal measure, the specialist loses entirely.
+Specialisation is only the winning strategy when the niche is perfectly exact and the system guarantees that nothing outside that niche ever reaches the specialist.
+This is what organs actually have. A heart sees exactly one problem — pump blood. It never sees digestion, immunity, or cognition. Not because those problems don't exist in the organism, but because the system is organised well enough to guarantee they never reach the heart. The niche is exact because the architecture makes it exact.
+
+Transformer components have no such guarantee. Every attention head and every MLP layer receives the full residual stream — a mixture of syntax, semantics, factual recall, and reasoning all entangled together. No component ever faces a niche exact enough to justify full specialisation. Generalisation is always the rational response to a mixed input.
+
+This reframes the modularity problem precisely. The goal is not to incentivise specialisation directly. It is to architect information flow such that each component only ever receives exactly the problem it should solve. Specialisation then emerges naturally — not because it was rewarded but because the niche became exact enough to make it the only winning strategy.
+
+The difficulty is that doing this requires knowing what those exact problems are before building the system. Which requires understanding what the network should learn before it has learned it. The chicken and egg remains.
+
+The common argument is that modularity emerges because it makes organisms more evolvable. That argument frames modularity as beneficial to the whole system. The replicable substrate argument is bottom-up: modularity emerges because replicable units at every scale are independently subject to selection pressure. That is the (universe or the organism) will "select" for internal systems that function as efficent and well as possible. The most efficent(and in extension replicatable) systems are specialized "modular" systems so those get produced.
+
+
+### The Signal Dilution Problem
+
+The fitness signal at each level is real but diluted by noise from higher levels. A superior heart design propagates only if the organism carrying it also survives and reproduces — which depends on countless factors unrelated to cardiac performance. A perfect heart in an organism eaten by a predator does not propagate. The selection signal exists but its noise-to-signal ratio is poor at the organ level compared to the organelle level.
+
+This creates a hierarchy of signal clarity:
+
+```
+Organelle — fast replication, tight feedback, sharp specialisation
+Cell      — fast replication, fairly clear signal
+Organ     — signal diluted by organism-level noise, slower specialisation
+Organism  — clear signal, slow timescale
+```
+
+Modularity and specialisation are sharpest where the replication signal is fastest and least diluted. This is why organelles are extraordinarily specialised and why suboptimal organ designs can persist for millions of years — the signal is too noisy to fix them quickly.
+
+### Why Neural Networks Do Not Naturally Modularise
+
+Parameters do not replicate. Layers do not replicate. There is no local fitness signal below the level of the whole network's loss. Every component is evaluated globally, through a single entangled objective, with no mechanism to isolate any component's individual contribution from the noise introduced by everything else.
+
+Biology averages out this noise through populations of billions of organisms over millions of generations. A single training run has one global loss signal and no replication at any sub-network scale. The noise never averages out. No local selection pressure exists to drive specialisation at any level below the whole model.
+
+This may be the deepest reason neural networks fail to naturally modularise: there is no replicable substrate below the whole model to generate the local selection pressure that produces specialisation everywhere else in nature.
+
+### What This Implies For Architecture
+
+To recover modularity artificially, you would need something that functions as a local fitness signal at every level you want specialisation at — fast, low-noise, isolated from the global objective enough to actually drive component-level selection.
+
+This is easy to state and extremely hard to build. It is also, arguably, the central unsolved problem that Chisel, learned optimizers, mixture of experts, and modular network research are all circling around from different directions. None have solved it. The biological solution required billions of years and a replicable substrate at every scale. Finding a tractable equivalent for gradient-based learning remains an open problem.
 
 ---
 
 ## Status
 
-Early concept stage. No implementation exists. The ideas described here are theoretical and have not been empirically validated. Contributions, critiques, and experimental results are welcome.
+Early concept stage. No implementation exists nor will it the main idea is no longer assumed to be valid. The ideas described here are theoretical and have not been empirically validated. Contributions, critiques, and experimental results are welcome.
 
----
-
-## License
-
-MIT
